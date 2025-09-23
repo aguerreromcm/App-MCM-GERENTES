@@ -1,9 +1,11 @@
 import { useState, useContext, useEffect } from "react"
 import { View, Text, StatusBar, ScrollView, Pressable, ActivityIndicator } from "react-native"
-import { useLocalSearchParams, router } from "expo-router"
-import { COLORS, FONTS } from "../../constants"
 import { SafeAreaInsetsContext } from "react-native-safe-area-context"
+import { useLocalSearchParams, router } from "expo-router"
 import { MaterialIcons, Feather } from "@expo/vector-icons"
+
+import { COLORS, FONTS } from "../../constants"
+import { detalleSemanalEjecutivo } from "../../services"
 import numeral from "numeral"
 
 numeral.zeroFormat(0)
@@ -12,7 +14,9 @@ numeral.nullFormat(0)
 export default function DetalleEjecutivo() {
     const { ejecutivo, dia, fecha } = useLocalSearchParams()
     const [datosEjecutivo, setDatosEjecutivo] = useState(null)
+    const [creditosDelDia, setCreditosDelDia] = useState([])
     const [loading, setLoading] = useState(true)
+    const [loadingCreditos, setLoadingCreditos] = useState(false)
     const insets = useContext(SafeAreaInsetsContext)
 
     useEffect(() => {
@@ -21,12 +25,50 @@ export default function DetalleEjecutivo() {
                 const datos = JSON.parse(ejecutivo)
                 setDatosEjecutivo(datos)
                 setLoading(false)
+                // Cargar detalles de créditos para el día específico
+                cargarCreditosDelDia(datos.ASESOR, dia)
             } catch (error) {
                 console.error("Error al parsear datos del ejecutivo:", error)
                 setLoading(false)
             }
         }
-    }, [ejecutivo])
+    }, [ejecutivo, dia])
+
+    const cargarCreditosDelDia = async (codigoEjecutivo, diaSeleccionado) => {
+        try {
+            setLoadingCreditos(true)
+            const response = await detalleSemanalEjecutivo.obtener(codigoEjecutivo)
+
+            if (response.success && response.data?.cobranza_semana) {
+                // Mapeo de días en español a días en el JSON de respuesta
+                const mapaDias = {
+                    LUNES: "LUNES",
+                    MARTES: "MARTES",
+                    MIÉRCOLES: "MIERCOLES",
+                    MIERCOLES: "MIERCOLES",
+                    JUEVES: "JUEVES",
+                    VIERNES: "VIERNES",
+                    SÁBADO: "SABADO",
+                    SABADO: "SABADO",
+                    DOMINGO: "DOMINGO"
+                }
+
+                const diaFiltrar =
+                    mapaDias[diaSeleccionado.toUpperCase()] || diaSeleccionado.toUpperCase()
+
+                // Filtrar créditos por el día específico
+                const creditosFiltrados = response.data.cobranza_semana.filter(
+                    (credito) => credito.dia_semana === diaFiltrar
+                )
+
+                setCreditosDelDia(creditosFiltrados)
+            }
+        } catch (error) {
+            console.error("Error al cargar créditos del día:", error)
+        } finally {
+            setLoadingCreditos(false)
+        }
+    }
 
     const verRutaEjecutivo = () => {
         if (datosEjecutivo) {
@@ -39,6 +81,21 @@ export default function DetalleEjecutivo() {
                 }
             })
         }
+    }
+
+    const getDisplayDate = (dateString) => {
+        const dateParts = dateString.split("-")
+        if (dateParts.length !== 3) return dateString // Retorna el string original si la fecha no es válida
+
+        const [year, month, day] = dateParts.map(Number)
+        const date = new Date(year, month - 1, day)
+        if (isNaN(date)) return dateString // Retorna el string original si la fecha no es válida
+
+        return date.toLocaleDateString("es-MX", {
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit"
+        })
     }
 
     const volverAlResumen = () => {
@@ -177,6 +234,209 @@ export default function DetalleEjecutivo() {
         )
     }
 
+    const renderCreditosDelDia = () => {
+        if (creditosDelDia.length === 0 && !loadingCreditos) {
+            return (
+                <View
+                    style={{
+                        backgroundColor: COLORS.white,
+                        borderRadius: 12,
+                        padding: 20,
+                        marginVertical: 16,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 3,
+                        alignItems: "center"
+                    }}
+                >
+                    <MaterialIcons name="credit-card" size={48} color={COLORS.gray3} />
+                    <Text
+                        style={{
+                            ...FONTS.h4,
+                            color: COLORS.black,
+                            marginTop: 12,
+                            marginBottom: 8
+                        }}
+                    >
+                        Sin créditos para {dia}
+                    </Text>
+                    <Text
+                        style={{
+                            ...FONTS.body4,
+                            color: COLORS.gray3,
+                            textAlign: "center"
+                        }}
+                    >
+                        No hay créditos programados para este día
+                    </Text>
+                </View>
+            )
+        }
+
+        if (loadingCreditos) {
+            return (
+                <View
+                    style={{
+                        backgroundColor: COLORS.white,
+                        borderRadius: 12,
+                        padding: 20,
+                        marginVertical: 16,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.1,
+                        shadowRadius: 4,
+                        elevation: 3,
+                        alignItems: "center"
+                    }}
+                >
+                    <ActivityIndicator size="large" color={COLORS.primary} />
+                    <Text
+                        style={{
+                            ...FONTS.body4,
+                            color: COLORS.gray3,
+                            marginTop: 12,
+                            textAlign: "center"
+                        }}
+                    >
+                        Cargando créditos del día...
+                    </Text>
+                </View>
+            )
+        }
+
+        return (
+            <View style={{ marginVertical: 16 }}>
+                <Text
+                    style={{
+                        ...FONTS.h4,
+                        color: COLORS.black,
+                        fontWeight: "600",
+                        marginBottom: 12
+                    }}
+                >
+                    Créditos del {dia} ({creditosDelDia.length})
+                </Text>
+                {creditosDelDia.map((credito, index) => (
+                    <View
+                        key={`credito-${index}`}
+                        style={{
+                            backgroundColor: COLORS.white,
+                            borderRadius: 12,
+                            padding: 16,
+                            marginBottom: 12,
+                            shadowColor: "#000",
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 4,
+                            elevation: 3,
+                            borderLeftWidth: 4,
+                            borderLeftColor:
+                                credito.estatus_pago === "PENDIENTE"
+                                    ? COLORS.warning
+                                    : COLORS.success
+                        }}
+                    >
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                marginBottom: 8
+                            }}
+                        >
+                            <Text
+                                style={{
+                                    ...FONTS.body3,
+                                    color: COLORS.black,
+                                    fontWeight: "600"
+                                }}
+                            >
+                                {credito.cdgns}
+                            </Text>
+                            <View
+                                style={{
+                                    backgroundColor:
+                                        credito.estatus_pago === "PENDIENTE"
+                                            ? COLORS.warning
+                                            : COLORS.success,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 2,
+                                    borderRadius: 8
+                                }}
+                            >
+                                <Text
+                                    style={{
+                                        ...FONTS.body5,
+                                        color: COLORS.white,
+                                        fontWeight: "600"
+                                    }}
+                                >
+                                    {credito.estatus_pago}
+                                </Text>
+                            </View>
+                        </View>
+
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                marginBottom: 4
+                            }}
+                        >
+                            <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
+                                Ciclo: {credito.ciclo}
+                            </Text>
+                            <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
+                                {credito.fecha_esperada}
+                            </Text>
+                        </View>
+
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                alignItems: "center"
+                            }}
+                        >
+                            <View>
+                                <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
+                                    Monto Esperado
+                                </Text>
+                                <Text
+                                    style={{
+                                        ...FONTS.body3,
+                                        color: COLORS.primary,
+                                        fontWeight: "600"
+                                    }}
+                                >
+                                    ${numeral(credito.monto_esperado).format("0,0.00")}
+                                </Text>
+                            </View>
+
+                            {credito.monto_pagado > 0 && (
+                                <View style={{ alignItems: "flex-end" }}>
+                                    <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
+                                        Monto Pagado
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            ...FONTS.body3,
+                                            color: COLORS.success,
+                                            fontWeight: "600"
+                                        }}
+                                    >
+                                        ${numeral(credito.monto_pagado).format("0,0.00")}
+                                    </Text>
+                                </View>
+                            )}
+                        </View>
+                    </View>
+                ))}
+            </View>
+        )
+    }
+
     if (loading) {
         return (
             <View
@@ -274,7 +534,7 @@ export default function DetalleEjecutivo() {
                             </Text>
                             <Text className="text-base text-gray-600">
                                 <Text className="text-gray-600 text-sm">
-                                    {dia} - {datosEjecutivo.SUCURSAL} - {fecha}
+                                    {dia} - {datosEjecutivo.SUCURSAL} - {getDisplayDate(fecha)}
                                 </Text>
                             </Text>
                         </View>
@@ -315,81 +575,46 @@ export default function DetalleEjecutivo() {
                             datosEjecutivo.PENDIENTE_EFECTIVO >= 0 ? COLORS.primary : COLORS.error
                         )}
                     </View>
+                    <View className="flex justify-between">
+                        {renderEstadisticasCard()}
 
-                    {renderEstadisticasCard()}
-                    {/* Botón para ver ruta */}
-                    <Pressable
-                        onPress={verRutaEjecutivo}
-                        style={{
-                            backgroundColor: COLORS.primary,
-                            marginHorizontal: 20,
-                            marginVertical: 20,
-                            paddingVertical: 16,
-                            borderRadius: 12,
-                            flexDirection: "row",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            shadowColor: "#000",
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.2,
-                            shadowRadius: 4,
-                            elevation: 5
-                        }}
-                    >
-                        <Feather
-                            name="map-pin"
-                            size={24}
-                            color={COLORS.white}
-                            style={{ marginRight: 12 }}
-                        />
-                        <Text
+                        {/* Botón para ver ruta */}
+                        <Pressable
+                            onPress={verRutaEjecutivo}
                             style={{
-                                ...FONTS.h4,
-                                color: COLORS.white,
-                                fontWeight: "600"
+                                backgroundColor: COLORS.primary,
+                                marginVertical: 20,
+                                paddingVertical: 16,
+                                borderRadius: 12,
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.2,
+                                shadowRadius: 4,
+                                elevation: 5
                             }}
                         >
-                            Ver Ruta de Cobranza
-                        </Text>
-                    </Pressable>
+                            <Feather
+                                name="map-pin"
+                                size={24}
+                                color={COLORS.white}
+                                style={{ marginRight: 12 }}
+                            />
+                            <Text
+                                style={{
+                                    ...FONTS.h4,
+                                    color: COLORS.white,
+                                    fontWeight: "600"
+                                }}
+                            >
+                                Ver Ruta de Cobranza
+                            </Text>
+                        </Pressable>
 
-                    {/* Espacio para cards de créditos (futuro) */}
-                    <View
-                        style={{
-                            backgroundColor: COLORS.white,
-                            borderRadius: 12,
-                            padding: 20,
-                            marginHorizontal: 20,
-                            marginVertical: 8,
-                            shadowColor: "#000",
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.1,
-                            shadowRadius: 4,
-                            elevation: 3,
-                            alignItems: "center"
-                        }}
-                    >
-                        <MaterialIcons name="credit-card" size={48} color={COLORS.gray3} />
-                        <Text
-                            style={{
-                                ...FONTS.h4,
-                                color: COLORS.black,
-                                marginTop: 12,
-                                marginBottom: 8
-                            }}
-                        >
-                            Detalles de Créditos
-                        </Text>
-                        <Text
-                            style={{
-                                ...FONTS.body4,
-                                color: COLORS.gray3,
-                                textAlign: "center"
-                            }}
-                        >
-                            Esta sección mostrará los detalles de créditos cuando el endpoint esté
-                            disponible
-                        </Text>
+                        {/* Créditos del día */}
+                        {renderCreditosDelDia()}
                     </View>
                 </ScrollView>
             </View>

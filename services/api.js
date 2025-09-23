@@ -14,6 +14,7 @@ export const API_CONFIG = {
         CATALOGO_TIPOS_PAGO: "/CatalogoTiposPago",
         RESUMEN_DIARIO: "/ResumenDiario",
         RESUMEN_COBRANZA: "/ResumenCobranza",
+        DETALLE_SEMANAL_EJECUTIVO: "/CobranzaSemanaActual",
         RUTA_COBRANZA_EJECUTIVO: "/RutaCobranzaEjecutivo"
     },
 
