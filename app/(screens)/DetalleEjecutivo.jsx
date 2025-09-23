@@ -107,7 +107,12 @@ export default function DetalleEjecutivo() {
             <View className="w-[48%] bg-blue-50 p-4 rounded-xl mb-3">
                 <View className="flex-row items-center mb-2">
                     <MaterialIcons name={icono} size={20} color={color} />
-                    <Text className="text-sm font-medium text-gray-700 ml-2">{titulo}</Text>
+                    <Text
+                        className="text-sm font-medium text-gray-700 ml-2 flex-shrink"
+                        numberOfLines={2}
+                    >
+                        {titulo}
+                    </Text>
                 </View>
                 <Text className="text-xl font-bold text-gray-800">{valor}</Text>
             </View>
@@ -352,27 +357,33 @@ export default function DetalleEjecutivo() {
                                     fontWeight: "600"
                                 }}
                             >
-                                {credito.cdgns}
+                                {credito.nombre_cliente}
                             </Text>
-                            <View
-                                style={{
-                                    backgroundColor:
-                                        credito.estatus_pago === "PENDIENTE"
-                                            ? COLORS.warning
-                                            : COLORS.success,
-                                    paddingHorizontal: 8,
-                                    paddingVertical: 2,
-                                    borderRadius: 8
-                                }}
-                            >
-                                <Text
+                            <View className="flex items-center">
+                                <View
                                     style={{
-                                        ...FONTS.body5,
-                                        color: COLORS.white,
-                                        fontWeight: "600"
+                                        backgroundColor:
+                                            credito.estatus_pago === "PENDIENTE"
+                                                ? COLORS.warning
+                                                : COLORS.success,
+                                        paddingHorizontal: 8,
+                                        paddingVertical: 2,
+                                        borderRadius: 8
                                     }}
                                 >
-                                    {credito.estatus_pago}
+                                    <Text
+                                        style={{
+                                            ...FONTS.body5,
+                                            color: COLORS.white,
+                                            fontWeight: "600"
+                                        }}
+                                    >
+                                        {credito.estatus_pago}
+                                    </Text>
+                                </View>
+
+                                <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
+                                    {credito.fecha_esperada}
                                 </Text>
                             </View>
                         </View>
@@ -385,10 +396,19 @@ export default function DetalleEjecutivo() {
                             }}
                         >
                             <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
-                                Ciclo: {credito.ciclo}
+                                Crédito: {credito.cdgns}
                             </Text>
+                        </View>
+
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                marginBottom: 4
+                            }}
+                        >
                             <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
-                                {credito.fecha_esperada}
+                                Ciclo: {credito.ciclo}
                             </Text>
                         </View>
 

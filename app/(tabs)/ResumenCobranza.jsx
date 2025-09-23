@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext, TextInput } from "react"
+import { useState, useEffect, useContext } from "react"
 import {
     View,
     Text,
@@ -8,7 +8,8 @@ import {
     ActivityIndicator,
     Dimensions,
     Platform,
-    Image
+    Image,
+    TextInput
 } from "react-native"
 import { SafeAreaInsetsContext } from "react-native-safe-area-context"
 import { MaterialIcons, Feather } from "@expo/vector-icons"
@@ -43,6 +44,39 @@ export default function ResumenCobranza() {
         JUEVES: "#96CEB4",
         VIERNES: "#FFEAA7"
     }
+
+    // Función para obtener todos los ejecutivos filtrados por búsqueda
+    const obtenerEjecutivosFiltrados = () => {
+        if (!datos || terminoBusqueda.length < 3) return []
+
+        const ejecutivosFiltrados = []
+
+        diasSemana.forEach((dia) => {
+            const datosDelDia = datos?.por_dia[dia]
+            if (datosDelDia && Object.keys(datosDelDia).length > 0) {
+                const sucursalKey = Object.keys(datosDelDia)[0]
+                const datosSucursal = datosDelDia[sucursalKey]
+
+                datosSucursal.detalle.forEach((ejecutivo) => {
+                    if (
+                        ejecutivo.NOMBRE_ASESOR.toLowerCase().includes(
+                            terminoBusqueda.toLowerCase()
+                        ) ||
+                        ejecutivo.ASESOR.toLowerCase().includes(terminoBusqueda.toLowerCase())
+                    ) {
+                        ejecutivosFiltrados.push({
+                            ...ejecutivo,
+                            dia: dia
+                        })
+                    }
+                })
+            }
+        })
+
+        return ejecutivosFiltrados
+    }
+
+    const clientesFiltrados = obtenerEjecutivosFiltrados()
 
     const obtenerColorDia = (dia) => {
         const hoy = new Date()
@@ -336,6 +370,124 @@ export default function ResumenCobranza() {
         )
     }
 
+    const renderResultadosBusqueda = () => {
+        if (terminoBusqueda.length < 3) return null
+
+        return (
+            <View style={{ paddingHorizontal: 20, paddingVertical: 16 }}>
+                <Text
+                    style={{
+                        ...FONTS.h4,
+                        color: COLORS.black,
+                        marginBottom: 12
+                    }}
+                >
+                    Resultados de Búsqueda ({clientesFiltrados.length})
+                </Text>
+
+                {clientesFiltrados.length === 0 ? (
+                    <View
+                        style={{
+                            backgroundColor: COLORS.white,
+                            borderRadius: 12,
+                            padding: 20,
+                            alignItems: "center",
+                            shadowColor: "#000",
+                            shadowOffset: { width: 0, height: 2 },
+                            shadowOpacity: 0.1,
+                            shadowRadius: 4,
+                            elevation: 3
+                        }}
+                    >
+                        <MaterialIcons name="search-off" size={48} color={COLORS.gray3} />
+                        <Text
+                            style={{
+                                ...FONTS.body3,
+                                color: COLORS.black,
+                                marginTop: 12,
+                                marginBottom: 4
+                            }}
+                        >
+                            Sin resultados
+                        </Text>
+                        <Text
+                            style={{
+                                ...FONTS.body4,
+                                color: COLORS.gray3,
+                                textAlign: "center"
+                            }}
+                        >
+                            No se encontraron ejecutivos que coincidan con "{terminoBusqueda}"
+                        </Text>
+                    </View>
+                ) : (
+                    clientesFiltrados.map((ejecutivo, index) => (
+                        <Pressable
+                            key={`busqueda-${index}`}
+                            onPress={() => verDetalleEjecutivo(ejecutivo, ejecutivo.dia)}
+                            style={{
+                                flexDirection: "row",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                paddingVertical: 16,
+                                paddingHorizontal: 20,
+                                backgroundColor: COLORS.white,
+                                borderRadius: 12,
+                                marginVertical: 4,
+                                shadowColor: "#000",
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.1,
+                                shadowRadius: 4,
+                                elevation: 3
+                            }}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{
+                                        ...FONTS.body3,
+                                        color: COLORS.black,
+                                        fontWeight: "600"
+                                    }}
+                                >
+                                    {ejecutivo.NOMBRE_ASESOR}
+                                </Text>
+                                <Text
+                                    style={{
+                                        ...FONTS.body4,
+                                        color: COLORS.gray3
+                                    }}
+                                >
+                                    {ejecutivo.dia} | Código: {ejecutivo.ASESOR}
+                                </Text>
+                                <Text
+                                    style={{
+                                        ...FONTS.body4,
+                                        color: COLORS.gray3
+                                    }}
+                                >
+                                    Pagos: {ejecutivo.PAGOS_COBRADOS}/{ejecutivo.PAGOS_DEL_DIA} |
+                                    Recolectado: ${numeral(ejecutivo.RECOLECTADO).format("0,0.00")}
+                                </Text>
+                            </View>
+                            <View style={{ alignItems: "center" }}>
+                                <Feather name="eye" size={20} color={COLORS.primary} />
+                                <Text
+                                    style={{
+                                        ...FONTS.body5,
+                                        color: COLORS.primary,
+                                        marginTop: 2
+                                    }}
+                                >
+                                    Ver
+                                </Text>
+                            </View>
+                        </Pressable>
+                    ))
+                )}
+            </View>
+        )
+    }
+
     useEffect(() => {
         obtenerDatos()
     }, [])
@@ -439,35 +591,39 @@ export default function ResumenCobranza() {
                     </View>
                 )}
 
-                <View className="border-b border-gray-200 px-5 py-3 flex-col justify-center w-full">
-                    <View className="flex-row justify-between items-center">
-                        <Text>Total Semanal:</Text>
+                {datos?.resumen_semanal_total && (
+                    <View className="border-b border-gray-200 px-5 py-3 flex-col justify-center w-full">
+                        <View className="flex-row justify-between items-center">
+                            <Text>Total Semanal:</Text>
+                            <Text>
+                                {new Date().toLocaleString("es-MX", {
+                                    timeZone: "America/Mexico_City",
+                                    year: "numeric",
+                                    month: "2-digit",
+                                    day: "2-digit",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit"
+                                })}
+                            </Text>
+                        </View>
                         <Text>
-                            {new Date().toLocaleString("es-MX", {
-                                timeZone: "America/Mexico_City",
-                                year: "numeric",
-                                month: "2-digit",
-                                day: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit"
-                            })}
+                            Esperados:{" "}
+                            {(datos?.resumen_semanal_total?.PAGOS_COBRADOS || 0) +
+                                (datos?.resumen_semanal_total?.PAGOS_PENDIENTES || 0)}
                         </Text>
+                        <Text>Cobrados: {datos?.resumen_semanal_total?.PAGOS_COBRADOS || 0}</Text>
                     </View>
-                    <Text>
-                        Esperados:{" "}
-                        {(datos?.resumen_semanal_total?.PAGOS_COBRADOS || 0) +
-                            (datos?.resumen_semanal_total?.PAGOS_PENDIENTES || 0)}
-                    </Text>
-                    <Text>Cobrados: {datos.resumen_semanal_total.PAGOS_COBRADOS}</Text>
-                </View>
+                )}
 
                 <ScrollView
                     showsVerticalScrollIndicator={false}
                     style={{ flex: 1 }}
                     contentContainerStyle={{ paddingBottom: 100 }}
                 >
-                    {diasSemana.map((dia) => renderDia(dia))}
+                    {terminoBusqueda.length >= 3
+                        ? renderResultadosBusqueda()
+                        : diasSemana.map((dia) => renderDia(dia))}
                 </ScrollView>
             </View>
         </View>
