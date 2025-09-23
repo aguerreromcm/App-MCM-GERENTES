@@ -1,4 +1,4 @@
-import { useState, useEffect, useContext } from "react"
+import { useState, useEffect, useContext, TextInput } from "react"
 import {
     View,
     Text,
@@ -27,6 +27,7 @@ export default function ResumenCobranza() {
     const [datos, setDatos] = useState(null)
     const [loading, setLoading] = useState(true)
     const [expandedDay, setExpandedDay] = useState(null)
+    const [terminoBusqueda, setTerminoBusqueda] = useState("")
     const insets = useContext(SafeAreaInsetsContext)
 
     const [mostrarBusqueda, setMostrarBusqueda] = useState(false)
@@ -438,28 +439,27 @@ export default function ResumenCobranza() {
                     </View>
                 )}
 
-                <View className="border-b border-gray-200 px-5 py-3 flex-row justify-between items-center">
-                    {datos?.resumen_semanal_total && (
-                        <>
-                            <Text>
-                                Total Semanal: Esperados:
-                                {datos.resumen_semanal_total.PAGOS_COBRADOS +
-                                    datos.resumen_semanal_total.PAGOS_PENDIENTES}{" "}
-                                | Cobrados: {datos.resumen_semanal_total.PAGOS_COBRADOS}
-                            </Text>
-                            <Text>
-                                {new Date().toLocaleString("es-MX", {
-                                    timeZone: "America/Mexico_City",
-                                    year: "numeric",
-                                    month: "2-digit",
-                                    day: "2-digit",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                    second: "2-digit"
-                                })}
-                            </Text>
-                        </>
-                    )}
+                <View className="border-b border-gray-200 px-5 py-3 flex-col justify-center w-full">
+                    <View className="flex-row justify-between items-center">
+                        <Text>Total Semanal:</Text>
+                        <Text>
+                            {new Date().toLocaleString("es-MX", {
+                                timeZone: "America/Mexico_City",
+                                year: "numeric",
+                                month: "2-digit",
+                                day: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit"
+                            })}
+                        </Text>
+                    </View>
+                    <Text>
+                        Esperados:{" "}
+                        {(datos?.resumen_semanal_total?.PAGOS_COBRADOS || 0) +
+                            (datos?.resumen_semanal_total?.PAGOS_PENDIENTES || 0)}
+                    </Text>
+                    <Text>Cobrados: {datos.resumen_semanal_total.PAGOS_COBRADOS}</Text>
                 </View>
 
                 <ScrollView
