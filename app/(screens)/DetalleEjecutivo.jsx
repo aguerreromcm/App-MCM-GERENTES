@@ -311,6 +311,22 @@ export default function DetalleEjecutivo() {
             )
         }
 
+        // Función para obtener el color del borde basado en los montos
+        const obtenerColorBorde = (credito) => {
+            const montoEsperado = credito.monto_esperado || 0
+            const montoPagado = credito.monto_pagado || 0
+
+            if (montoPagado === 0) {
+                return COLORS.warning // Amarillo - No tiene monto pagado
+            } else if (montoPagado === montoEsperado) {
+                return COLORS.success // Verde - Igual
+            } else if (montoPagado > montoEsperado) {
+                return "#8B5CF6" // Morado - Pagado mayor al esperado
+            } else {
+                return "#F97316" // Naranja - Pagado menor al esperado
+            }
+        }
+
         return (
             <View style={{ marginVertical: 16 }}>
                 <Text
@@ -337,29 +353,45 @@ export default function DetalleEjecutivo() {
                             shadowRadius: 4,
                             elevation: 3,
                             borderLeftWidth: 4,
-                            borderLeftColor:
-                                credito.estatus_pago === "PENDIENTE"
-                                    ? COLORS.warning
-                                    : COLORS.success
+                            borderLeftColor: obtenerColorBorde(credito)
                         }}
                     >
-                        <View
-                            style={{
-                                flexDirection: "row",
-                                justifyContent: "space-between",
-                                marginBottom: 8
-                            }}
-                        >
+                        {/* Fila 1: Nombre del cliente (2 columnas) */}
+                        <View style={{ marginBottom: 12 }}>
                             <Text
                                 style={{
                                     ...FONTS.body3,
                                     color: COLORS.black,
                                     fontWeight: "600"
                                 }}
+                                numberOfLines={2}
                             >
-                                {credito.nombre_cliente}
+                                {credito.nombre_cliente || credito.cdgns}
                             </Text>
-                            <View className="flex items-center">
+                        </View>
+
+                        {/* Fila 2: Crédito/Ciclo | Estado/Fecha */}
+                        <View
+                            style={{
+                                flexDirection: "row",
+                                justifyContent: "space-between",
+                                marginBottom: 12
+                            }}
+                        >
+                            {/* Columna 1: Crédito y Ciclo */}
+                            <View style={{ flex: 1 }}>
+                                <Text
+                                    style={{ ...FONTS.body4, color: COLORS.gray3, marginBottom: 2 }}
+                                >
+                                    Crédito: {credito.cdgns}
+                                </Text>
+                                <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
+                                    Ciclo: {credito.ciclo}
+                                </Text>
+                            </View>
+
+                            {/* Columna 2: Estado y Fecha */}
+                            <View style={{ alignItems: "flex-end", justifyContent: "center" }}>
                                 <View
                                     style={{
                                         backgroundColor:
@@ -368,7 +400,8 @@ export default function DetalleEjecutivo() {
                                                 : COLORS.success,
                                         paddingHorizontal: 8,
                                         paddingVertical: 2,
-                                        borderRadius: 8
+                                        borderRadius: 8,
+                                        marginBottom: 4
                                     }}
                                 >
                                     <Text
@@ -381,45 +414,22 @@ export default function DetalleEjecutivo() {
                                         {credito.estatus_pago}
                                     </Text>
                                 </View>
-
                                 <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
                                     {credito.fecha_esperada}
                                 </Text>
                             </View>
                         </View>
 
+                        {/* Fila 3: Monto Esperado | Monto Pagado */}
                         <View
                             style={{
                                 flexDirection: "row",
                                 justifyContent: "space-between",
-                                marginBottom: 4
+                                alignItems: "flex-end"
                             }}
                         >
-                            <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
-                                Crédito: {credito.cdgns}
-                            </Text>
-                        </View>
-
-                        <View
-                            style={{
-                                flexDirection: "row",
-                                justifyContent: "space-between",
-                                marginBottom: 4
-                            }}
-                        >
-                            <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
-                                Ciclo: {credito.ciclo}
-                            </Text>
-                        </View>
-
-                        <View
-                            style={{
-                                flexDirection: "row",
-                                justifyContent: "space-between",
-                                alignItems: "center"
-                            }}
-                        >
-                            <View>
+                            {/* Columna 1: Monto Esperado */}
+                            <View style={{ flex: 1 }}>
                                 <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>
                                     Monto Esperado
                                 </Text>
@@ -434,6 +444,7 @@ export default function DetalleEjecutivo() {
                                 </Text>
                             </View>
 
+                            {/* Columna 2: Monto Pagado (solo si > 0) */}
                             {credito.monto_pagado > 0 && (
                                 <View style={{ alignItems: "flex-end" }}>
                                     <Text style={{ ...FONTS.body4, color: COLORS.gray3 }}>

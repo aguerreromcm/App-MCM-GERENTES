@@ -37,12 +37,16 @@ export default function RutaEjecutivo() {
         try {
             setLoading(true)
             const fechaConsulta = fecha || obtenerFechaActual()
+            console.log("Consultando ruta para ejecutivo:", ejecutivo, "fecha:", fechaConsulta)
             const response = await rutaCobranzaEjecutivo.obtener(ejecutivo, fechaConsulta)
 
             if (response.success) {
                 setRutaData(response.data)
-                console.log("Ruta data:", response.data)
+                console.log("Ruta data recibida:", response.data)
+                console.log("Features:", response.data?.features?.length)
+                console.log("KeyMaps disponible:", !!keyMaps)
             } else {
+                console.log("Error en respuesta:", response.error)
                 Alert.alert("Error", response.error || "No se pudo obtener la ruta del ejecutivo")
             }
         } catch (error) {
@@ -58,12 +62,24 @@ export default function RutaEjecutivo() {
     }
 
     const generarHTMLMapa = () => {
-        if (!rutaData || !rutaData.features || !keyMaps) {
+        if (!rutaData || !rutaData.features) {
             return `
                 <html>
                     <body>
                         <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif;">
                             <p>No hay datos de ruta disponibles</p>
+                        </div>
+                    </body>
+                </html>
+            `
+        }
+
+        if (!keyMaps) {
+            return `
+                <html>
+                    <body>
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif;">
+                            <p>API Key de Google Maps no disponible</p>
                         </div>
                     </body>
                 </html>
@@ -104,7 +120,9 @@ export default function RutaEjecutivo() {
                 const { properties } = punto
                 return `
                 var marker${properties.numero} = new google.maps.Marker({
-                    position: { lat: ${coordinates[1]}, lng: ${coordinates[0]} },
+                    position: { lat: ${parseFloat(coordinates[1])}, lng: ${parseFloat(
+                    coordinates[0]
+                )} },
                     map: map,
                     title: "${properties.nombre}",
                     label: {
@@ -126,6 +144,7 @@ export default function RutaEjecutivo() {
                     content: \`
                         <div style="font-family: Arial, sans-serif;">
                             <h4 style="margin: 0 0 8px 0;">${properties.nombre}</h4>
+                            <p style="margin: 4px 0;"><strong>Tipo:</strong> ${properties.tipo}</p>
                             <p style="margin: 4px 0;"><strong>Monto:</strong> $${numeral(
                                 properties.monto
                             ).format("0,0.00")}</p>
@@ -150,7 +169,9 @@ export default function RutaEjecutivo() {
         const polylines = lineas
             .map((linea, index) => {
                 const coordinates = linea.geometry.coordinates
-                    .map((coord) => `{ lat: ${coord[1]}, lng: ${coord[0]} }`)
+                    .map(
+                        (coord) => `{ lat: ${parseFloat(coord[1])}, lng: ${parseFloat(coord[0])} }`
+                    )
                     .join(", ")
 
                 return `
@@ -196,10 +217,19 @@ export default function RutaEjecutivo() {
                         ${puntos
                             .map(
                                 (punto) =>
-                                    `bounds.extend(new google.maps.LatLng(${punto.geometry.coordinates[1]}, ${punto.geometry.coordinates[0]}));`
+                                    `bounds.extend(new google.maps.LatLng(${parseFloat(
+                                        punto.geometry.coordinates[1]
+                                    )}, ${parseFloat(punto.geometry.coordinates[0])}));`
                             )
                             .join("\n                        ")}
                         map.fitBounds(bounds);
+                        
+                        // Asegurar un zoom mínimo
+                        google.maps.event.addListenerOnce(map, 'bounds_changed', function() {
+                            if (map.getZoom() > 18) {
+                                map.setZoom(18);
+                            }
+                        });
                     }
                 </script>
                 <script async defer
@@ -350,6 +380,14 @@ export default function RutaEjecutivo() {
                                 javaScriptEnabled={true}
                                 domStorageEnabled={true}
                                 startInLoadingState={true}
+                                onError={(syntheticEvent) => {
+                                    const { nativeEvent } = syntheticEvent
+                                    console.log("WebView error: ", nativeEvent)
+                                }}
+                                onHttpError={(syntheticEvent) => {
+                                    const { nativeEvent } = syntheticEvent
+                                    console.log("WebView HTTP error: ", nativeEvent)
+                                }}
                                 renderLoading={() => (
                                     <View
                                         style={{
@@ -379,37 +417,47 @@ export default function RutaEjecutivo() {
                         </View>
                     </View>
                 ) : (
-                    <View
-                        style={{
-                            flex: 1,
-                            justifyContent: "center",
-                            alignItems: "center",
-                            backgroundColor: COLORS.grayscale100
-                        }}
-                    >
-                        <MaterialIcons name="route" size={64} color={COLORS.gray3} />
-                        <Text
-                            style={{
-                                ...FONTS.h1,
-                                color: COLORS.black,
-                                marginTop: 16,
-                                marginBottom: 8
-                            }}
-                        >
-                            Sin datos de ruta
-                        </Text>
-                        <Text
-                            style={{
-                                ...FONTS.body4,
-                                color: COLORS.gray3,
-                                textAlign: "center",
-                                marginHorizontal: 40
-                            }}
-                        >
-                            No se encontraron datos de ruta para este ejecutivo en la fecha
-                            seleccionada
-                        </Text>
-                    </View>
+                    (() => {
+                        console.log(
+                            "Condición de sin datos - rutaData:",
+                            !!rutaData,
+                            "features:",
+                            !!rutaData?.features
+                        )
+                        return (
+                            <View
+                                style={{
+                                    flex: 1,
+                                    justifyContent: "center",
+                                    alignItems: "center",
+                                    backgroundColor: COLORS.grayscale100
+                                }}
+                            >
+                                <MaterialIcons name="route" size={64} color={COLORS.gray3} />
+                                <Text
+                                    style={{
+                                        ...FONTS.h4,
+                                        color: COLORS.black,
+                                        marginTop: 16,
+                                        marginBottom: 8
+                                    }}
+                                >
+                                    Sin datos de ruta
+                                </Text>
+                                <Text
+                                    style={{
+                                        ...FONTS.body4,
+                                        color: COLORS.gray3,
+                                        textAlign: "center",
+                                        marginHorizontal: 40
+                                    }}
+                                >
+                                    No se encontraron datos de ruta para este ejecutivo en la fecha
+                                    seleccionada
+                                </Text>
+                            </View>
+                        )
+                    })()
                 )}
             </View>
         </View>

@@ -40,7 +40,7 @@ export default function Login() {
             const loginSuccess = await login(
                 userData.access_token,
                 userData.usuario,
-                userData.key_maps
+                userData["key-maps"]
             )
 
             if (loginSuccess) router.replace("/(tabs)/ResumenCobranza")
