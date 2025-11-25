@@ -8,14 +8,13 @@ export const API_CONFIG = {
     ENDPOINTS: {
         LOGIN: "/login",
         LOGOUT: "/logout",
-        CLIENTES_EJECUTIVO: "/ConsultaClientesEjecutivo",
-        DETALLE_CREDITO: "/DetalleMovimientosCliente",
         AGREGAR_PAGO_CLIENTE: "/AgregarPagoCliente",
         CATALOGO_TIPOS_PAGO: "/CatalogoTiposPago",
         RESUMEN_DIARIO: "/ResumenDiario",
         RESUMEN_COBRANZA: "/ResumenCobranza",
         DETALLE_SEMANAL_EJECUTIVO: "/CobranzaSemanaActual",
-        RUTA_COBRANZA_EJECUTIVO: "/RutaCobranzaEjecutivo"
+        RUTA_COBRANZA_EJECUTIVO: "/RutaCobranzaEjecutivo",
+        CONSULTA_CREDITO: "/ConsultaClientesGerente"
     },
 
     HTTP_STATUS: {

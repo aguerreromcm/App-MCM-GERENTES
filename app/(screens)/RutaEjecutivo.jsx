@@ -1,13 +1,5 @@
-import React, { useState, useEffect, useContext } from "react"
-import {
-    View,
-    Text,
-    StatusBar,
-    ActivityIndicator,
-    Alert,
-    Pressable,
-    ScrollView
-} from "react-native"
+import { useState, useEffect, useContext } from "react"
+import { View, Text, StatusBar, ActivityIndicator, Alert, Pressable } from "react-native"
 import { WebView } from "react-native-webview"
 import { useLocalSearchParams, router } from "expo-router"
 import { COLORS, FONTS } from "../../constants"
@@ -37,14 +29,10 @@ export default function RutaEjecutivo() {
         try {
             setLoading(true)
             const fechaConsulta = fecha || obtenerFechaActual()
-            console.log("Consultando ruta para ejecutivo:", ejecutivo, "fecha:", fechaConsulta)
             const response = await rutaCobranzaEjecutivo.obtener(ejecutivo, fechaConsulta)
 
             if (response.success) {
                 setRutaData(response.data)
-                console.log("Ruta data recibida:", response.data)
-                console.log("Features:", response.data?.features?.length)
-                console.log("KeyMaps disponible:", !!keyMaps)
             } else {
                 console.log("Error en respuesta:", response.error)
                 Alert.alert("Error", response.error || "No se pudo obtener la ruta del ejecutivo")

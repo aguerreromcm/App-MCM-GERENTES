@@ -25,7 +25,6 @@ export default function DetalleEjecutivo() {
                 const datos = JSON.parse(ejecutivo)
                 setDatosEjecutivo(datos)
                 setLoading(false)
-                // Cargar detalles de créditos para el día específico
                 cargarCreditosDelDia(datos.ASESOR, dia)
             } catch (error) {
                 console.error("Error al parsear datos del ejecutivo:", error)
@@ -394,10 +393,7 @@ export default function DetalleEjecutivo() {
                             <View style={{ alignItems: "flex-end", justifyContent: "center" }}>
                                 <View
                                     style={{
-                                        backgroundColor:
-                                            credito.estatus_pago === "PENDIENTE"
-                                                ? COLORS.warning
-                                                : COLORS.success,
+                                        backgroundColor: obtenerColorBorde(credito),
                                         paddingHorizontal: 8,
                                         paddingVertical: 2,
                                         borderRadius: 8,

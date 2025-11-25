@@ -62,7 +62,7 @@ export default function Pago() {
             setCredito(datosPago.noCreditoDetalle)
             setCiclo(datosPago.cicloDetalle)
             setMonto(datosPago.pagoSemanalDetalle?.toString() || "")
-            setTipoPago(datosPago.pagoSemanalDetalle ? "P" : "") // P es el código por defecto para PAGO
+            setTipoPago(datosPago.pagoSemanalDetalle ? "P" : "")
         } else {
             setParametrosValidos(false)
         }
@@ -72,24 +72,24 @@ export default function Pago() {
     useEffect(() => {
         if (credito.length === 6) {
             const resultado = null
-            setCreditoValido(resultado.valido)
+            setCreditoValido(resultado?.valido)
 
-            if (resultado.valido) {
-                setInfoCredito(resultado.cliente)
+            if (resultado?.valido) {
+                setInfoCredito(resultado?.cliente)
                 // Auto-llenar el ciclo si el crédito es válido y no viene de DetalleCredito
-                if (!esDetalleCredito && resultado.cliente.ciclo) {
-                    setCiclo(resultado.cliente.ciclo.toString())
+                if (!esDetalleCredito && resultado?.cliente.ciclo) {
+                    setCiclo(resultado?.cliente.ciclo.toString())
                 }
 
                 // Auto-llenar el monto con pago_semanal si no viene de DetalleCredito
-                if (!esDetalleCredito && resultado.cliente.pago_semanal) {
-                    setMonto(resultado.cliente.pago_semanal.toString())
+                if (!esDetalleCredito && resultado?.cliente.pago_semanal) {
+                    setMonto(resultado?.cliente.pago_semanal.toString())
                     setTipoPago("P") // Establecer como PAGO por defecto
                 }
             } else {
                 setInfoCredito(null)
                 // Mostrar error si el crédito no es válido
-                showError("Crédito no válido", resultado.mensaje, [
+                showError("Crédito no válido", resultado?.mensaje, [
                     { text: "OK", style: "default" }
                 ])
             }
@@ -355,7 +355,7 @@ export default function Pago() {
                         // Guardar en storage local como pendiente
                         const resultado = await pagosPendientes.guardar(pagoData)
 
-                        if (resultado.success) {
+                        if (resultado?.success) {
                             hideWait()
                             const mensaje = `${tipoSeleccionado?.descripcion} de ${montoFormateado} guardado localmente, debe realizar la sincronización manual después.`
 

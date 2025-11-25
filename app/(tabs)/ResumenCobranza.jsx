@@ -37,13 +37,6 @@ export default function ResumenCobranza() {
     }
 
     const diasSemana = ["LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES"]
-    const coloresDias = {
-        LUNES: "#FF6B6B",
-        MARTES: "#4ECDC4",
-        MIERCOLES: "#45B7D1",
-        JUEVES: "#96CEB4",
-        VIERNES: "#FFEAA7"
-    }
 
     // Función para obtener todos los ejecutivos filtrados por búsqueda
     const obtenerEjecutivosFiltrados = () => {
@@ -568,7 +561,7 @@ export default function ResumenCobranza() {
                             <TextInput
                                 value={terminoBusqueda}
                                 onChangeText={setTerminoBusqueda}
-                                placeholder="Buscar por nombre o número de crédito..."
+                                placeholder="Buscar por nombre o código de ejecutivo..."
                                 className="flex-1 ml-2 text-base"
                                 autoFocus={true}
                             />
