@@ -9,13 +9,13 @@ import {
     Image,
     Platform
 } from "react-native"
-import { useLocalSearchParams, router } from "expo-router"
+import { router } from "expo-router"
 import { Feather, MaterialIcons } from "@expo/vector-icons"
 import { SafeAreaInsetsContext } from "react-native-safe-area-context"
 import numeral from "numeral"
 import { useCustomAlert } from "../../hooks/useCustomAlert"
 import { usePago } from "../../context/PagoContext"
-import { pagosPendientes, catalogos, registroPagos } from "../../services"
+import { pagosPendientes, catalogos, registroPagos, consultaClientes } from "../../services"
 import CustomAlert from "../../components/CustomAlert"
 import * as ImagePicker from "expo-image-picker"
 import * as Location from "expo-location"
@@ -23,14 +23,10 @@ import { generarIdPago } from "../../utils/pagoId"
 import storage from "../../utils/storage"
 
 export default function Pago() {
-    const params = useLocalSearchParams()
-    const { datosPago, tieneContextoPago, limpiarDatosPago } = usePago()
+    const { limpiarDatosPago } = usePago()
     const insets = useContext(SafeAreaInsetsContext)
     const { alertRef, showError, showSuccess, showInfo, showWarning, showWait, hideWait } =
         useCustomAlert()
-
-    // Estado para controlar si los parámetros son válidos (vienen con timestamp reciente)
-    const [parametrosValidos, setParametrosValidos] = useState(false)
 
     // Estados para los campos del formulario
     const [credito, setCredito] = useState("")
@@ -53,51 +49,60 @@ export default function Pago() {
     const scaleAnim = useState(new Animated.Value(1))[0]
     const shakeAnim = useState(new Animated.Value(0))[0]
 
-    const esDetalleCredito = tieneContextoPago()
-
-    // Efecto para cargar datos desde el contexto
-    useEffect(() => {
-        if (esDetalleCredito && datosPago) {
-            setParametrosValidos(true)
-            setCredito(datosPago.noCreditoDetalle)
-            setCiclo(datosPago.cicloDetalle)
-            setMonto(datosPago.pagoSemanalDetalle?.toString() || "")
-            setTipoPago(datosPago.pagoSemanalDetalle ? "P" : "")
-        } else {
-            setParametrosValidos(false)
-        }
-    }, [esDetalleCredito, datosPago])
-
     // Efecto para validar el número de crédito cuando cambia
     useEffect(() => {
-        if (credito.length === 6) {
-            const resultado = null
-            setCreditoValido(resultado?.valido)
-
-            if (resultado?.valido) {
-                setInfoCredito(resultado?.cliente)
-                // Auto-llenar el ciclo si el crédito es válido y no viene de DetalleCredito
-                if (!esDetalleCredito && resultado?.cliente.ciclo) {
-                    setCiclo(resultado?.cliente.ciclo.toString())
-                }
-
-                // Auto-llenar el monto con pago_semanal si no viene de DetalleCredito
-                if (!esDetalleCredito && resultado?.cliente.pago_semanal) {
-                    setMonto(resultado?.cliente.pago_semanal.toString())
-                    setTipoPago("P") // Establecer como PAGO por defecto
-                }
-            } else {
+        const validarCredito = async () => {
+            if (credito.length === 6) {
+                // Mostrar indicador de carga mientras se consulta
+                setCreditoValido(null)
                 setInfoCredito(null)
-                // Mostrar error si el crédito no es válido
-                showError("Crédito no válido", resultado?.mensaje, [
-                    { text: "OK", style: "default" }
-                ])
+
+                try {
+                    const resultado = await consultaClientes.consultarPorCredito(credito)
+
+                    if (resultado.success && resultado.valido) {
+                        setCreditoValido(true)
+                        setInfoCredito(resultado.cliente)
+
+                        // Auto-llenar el ciclo si el crédito es válido y no viene de DetalleCredito
+                        if (resultado.cliente.ciclo) {
+                            setCiclo(resultado.cliente.ciclo.toString())
+                        }
+
+                        // Auto-llenar el monto con pago_semanal si no viene de DetalleCredito
+                        if (resultado.cliente.pago_semanal) {
+                            setMonto(resultado.cliente.pago_semanal.toString())
+                            setTipoPago("P") // Establecer como PAGO por defecto
+                        }
+                    } else {
+                        setCreditoValido(false)
+                        setInfoCredito(null)
+                        // Mostrar error si el crédito no es válido
+                        showError(
+                            "Crédito no válido",
+                            resultado.mensaje || "El crédito no se encuentra en su cartera",
+                            [{ text: "OK", style: "default" }]
+                        )
+                    }
+                } catch (error) {
+                    console.error("Error al validar crédito:", error)
+                    setCreditoValido(false)
+                    setInfoCredito(null)
+                    showError(
+                        "Error",
+                        "No se pudo validar el crédito. Verifique su conexión e intente nuevamente.",
+                        [{ text: "OK", style: "default" }]
+                    )
+                }
+            } else if (credito.length > 0) {
+                setCreditoValido(null)
+                setInfoCredito(null)
             }
-        } else if (credito.length > 0) {
-            setCreditoValido(null)
-            setInfoCredito(null)
         }
-    }, [credito, esDetalleCredito])
+
+        // Solo validar cuando cambia el crédito
+        validarCredito()
+    }, [credito])
 
     // Cargar tipos de pago desde catálogos
     useEffect(() => {
@@ -150,7 +155,6 @@ export default function Pago() {
         setFotoComprobante(null)
         setMontoFormateado("")
         setFocusedField("")
-        setParametrosValidos(false)
         setCreditoValido(null)
         setInfoCredito(null)
 
@@ -214,14 +218,7 @@ export default function Pago() {
         }
 
         // Validación de monto máximo basada en el pago semanal
-        let pagoSemanalReferencia
-        if (esDetalleCredito && datosPago?.pagoSemanalDetalle) {
-            // Si viene del contexto de DetalleCredito, usar pagoSemanalDetalle
-            pagoSemanalReferencia = datosPago.pagoSemanalDetalle
-        } else if (infoCredito?.pago_semanal) {
-            // Si es búsqueda directa, usar el pago_semanal del endpoint
-            pagoSemanalReferencia = infoCredito.pago_semanal
-        }
+        const pagoSemanalReferencia = infoCredito?.pago_semanal
 
         if (pagoSemanalReferencia) {
             const montoMaximo = numeral(pagoSemanalReferencia).multiply(2)
@@ -253,12 +250,7 @@ export default function Pago() {
         const tipoSeleccionado = tiposPago.find((t) => t.codigo === tipoPago)
 
         // Determinar pago semanal de referencia para comparación
-        let pagoSemanalReferencia
-        if (esDetalleCredito && datosPago?.pagoSemanalDetalle) {
-            pagoSemanalReferencia = datosPago.pagoSemanalDetalle
-        } else if (infoCredito?.pago_semanal) {
-            pagoSemanalReferencia = infoCredito.pago_semanal
-        }
+        const pagoSemanalReferencia = infoCredito?.pago_semanal
 
         const diferencia = pagoSemanalReferencia
             ? numeral(montoFormateado).subtract(numeral(pagoSemanalReferencia).value())
@@ -315,7 +307,7 @@ export default function Pago() {
                             comentarios,
                             tipoPago: tipoPago, // código del tipo
                             tipoEtiqueta: tipoSeleccionado?.descripcion || tipoPago, // etiqueta para mostrar
-                            nombreCliente: infoCredito?.nombre || params.nombre || "",
+                            nombreCliente: infoCredito?.nombre || "",
                             fotoComprobante: fotoComprobante?.uri || null,
                             latitud: ubicacion.latitud,
                             longitud: ubicacion.longitud,
@@ -337,11 +329,7 @@ export default function Pago() {
                                         style: "default",
                                         onPress: () => {
                                             limpiarFormulario()
-                                            if (esDetalleCredito) {
-                                                router.push("/(screens)/DetalleCredito")
-                                            } else {
-                                                router.replace("/(tabs)/Cartera")
-                                            }
+                                            router.replace("/(tabs)/ResumenCobranza")
                                         }
                                     }
                                 ])
@@ -365,11 +353,7 @@ export default function Pago() {
                                     style: "default",
                                     onPress: () => {
                                         limpiarFormulario()
-                                        if (esDetalleCredito) {
-                                            router.push("/(screens)/DetalleCredito")
-                                        } else {
-                                            router.replace("/(tabs)/Cartera")
-                                        }
+                                        router.replace("/(tabs)/ResumenCobranza")
                                     }
                                 }
                             ])
@@ -481,9 +465,7 @@ export default function Pago() {
                         <View className="flex-1">
                             <Text className="text-2xl font-bold text-gray-800">Nuevo Pago</Text>
                             <Text className="text-base text-gray-600">
-                                {esDetalleCredito
-                                    ? "Confirme los datos del pago"
-                                    : "Complete la información del pago"}
+                                Ingrese el número de crédito para buscar al cliente
                             </Text>
                         </View>
                     </View>
@@ -501,9 +483,7 @@ export default function Pago() {
                                     </Text>
                                     <View
                                         className={`border-2 rounded-2xl p-4 ${
-                                            esDetalleCredito
-                                                ? "bg-gray-50 border-gray-200"
-                                                : creditoValido === true
+                                            creditoValido === true
                                                 ? "border-green-400 bg-green-50"
                                                 : creditoValido === false
                                                 ? "border-red-400 bg-red-50"
@@ -517,13 +497,19 @@ export default function Pago() {
                                                 value={credito}
                                                 onChangeText={setCredito}
                                                 placeholder="Ej: 123456"
-                                                editable={!esDetalleCredito}
                                                 onFocus={() => setFocusedField("credito")}
                                                 onBlur={() => setFocusedField("")}
                                                 className="flex-1 text-2xl font-bold text-gray-800"
                                                 keyboardType="numeric"
                                                 maxLength={6}
                                             />
+                                            {credito.length === 6 && creditoValido === null && (
+                                                <MaterialIcons
+                                                    name="hourglass-empty"
+                                                    size={20}
+                                                    color="#3b82f6"
+                                                />
+                                            )}
                                             {credito.length === 6 && creditoValido !== null && (
                                                 <MaterialIcons
                                                     name={creditoValido ? "check-circle" : "error"}
@@ -538,15 +524,7 @@ export default function Pago() {
                                     <Text className="text-sm font-medium text-gray-700 mb-2">
                                         Ciclo
                                     </Text>
-                                    <View
-                                        className={`border-2 rounded-2xl p-4 ${
-                                            esDetalleCredito
-                                                ? "bg-gray-50 border-gray-200"
-                                                : focusedField === "ciclo"
-                                                ? "border-blue-400 bg-blue-50"
-                                                : "border-gray-300 bg-white"
-                                        }`}
-                                    >
+                                    <View className="border-2 rounded-2xl p-4 bg-gray-50 border-gray-200">
                                         <TextInput
                                             value={ciclo}
                                             onChangeText={setCiclo}
@@ -752,36 +730,17 @@ export default function Pago() {
                     </Animated.View>
                 </ScrollView>
                 <View className="flex-row px-6 pt-2 border-t border-gray-200 justify-between">
-                    {esDetalleCredito ? (
-                        <View className="mb-4">
-                            <Pressable
-                                onPress={() => {
-                                    limpiarFormulario()
-                                    router.push("/(screens)/DetalleCredito")
-                                }}
-                                className="bg-red-600 rounded-2xl p-4"
-                            >
-                                <View className="flex-row items-center justify-center">
-                                    <MaterialIcons name="close" size={20} color="#fff" />
-                                    <Text className="text-white font-semibold ml-2">Cancelar</Text>
-                                </View>
-                            </Pressable>
-                        </View>
-                    ) : (
-                        <View className="mb-4">
-                            <Pressable
-                                onPress={limpiarFormulario}
-                                className="bg-gray-100 rounded-2xl p-4"
-                            >
-                                <View className="flex-row items-center justify-center">
-                                    <MaterialIcons name="refresh" size={20} color="#6B7280" />
-                                    <Text className="text-gray-600 font-semibold ml-2">
-                                        Limpiar
-                                    </Text>
-                                </View>
-                            </Pressable>
-                        </View>
-                    )}
+                    <View className="mb-4">
+                        <Pressable
+                            onPress={limpiarFormulario}
+                            className="bg-gray-100 rounded-2xl p-4"
+                        >
+                            <View className="flex-row items-center justify-center">
+                                <MaterialIcons name="refresh" size={20} color="#6B7280" />
+                                <Text className="text-gray-600 font-semibold ml-2">Limpiar</Text>
+                            </View>
+                        </Pressable>
+                    </View>
 
                     <Animated.View style={{ transform: [{ scale: scaleAnim }] }} className="mb-4">
                         <Pressable

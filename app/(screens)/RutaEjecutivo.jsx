@@ -18,11 +18,13 @@ export default function RutaEjecutivo() {
 
     const obtenerFechaActual = () => {
         const f = fecha ? new Date(fecha) : new Date()
-        return f.toLocaleDateString("es-MX", {
-            day: "2-digit",
-            month: "2-digit",
-            year: "numeric"
-        })
+        return (
+            f.getUTCDate().toString().padStart(2, "0") +
+            "/" +
+            (f.getUTCMonth() + 1).toString().padStart(2, "0") +
+            "/" +
+            f.getUTCFullYear().toString()
+        )
     }
 
     const obtenerRutaEjecutivo = async () => {
