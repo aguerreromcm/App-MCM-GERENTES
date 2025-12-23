@@ -156,15 +156,15 @@ export default function ResumenCobranza() {
 
         const data = [
             {
-                name: "Cobrados",
-                population: Math.max(numeral(porcentajeAvance).value(), 0),
+                name: "% Cobrados",
+                population: Math.max(numeral(porcentajeAvance).format("0.00"), 0),
                 color: COLORS.success,
                 legendFontColor: COLORS.black,
                 legendFontSize: 12
             },
             {
-                name: "Pendientes",
-                population: Math.max(numeral(porcentajePendiente).value(), 0),
+                name: "% Pendientes",
+                population: Math.max(numeral(porcentajePendiente).format("0.00"), 0),
                 color: COLORS.error,
                 legendFontColor: COLORS.black,
                 legendFontSize: 12
@@ -188,15 +188,6 @@ export default function ResumenCobranza() {
                     paddingLeft={"15"}
                     absolute
                 />
-                <Text
-                    style={{
-                        ...FONTS.h3,
-                        color: COLORS.black,
-                        marginTop: 10
-                    }}
-                >
-                    {porcentajeAvance.toFixed(1)}% completado
-                </Text>
             </View>
         )
     }
