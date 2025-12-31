@@ -33,26 +33,11 @@ export const consultaClientes = {
                 const cliente = response.data.clientes[0]
                 return {
                     success: true,
-                    valido: true,
-                    data: {
-                        ...cliente,
-                        gerente: response.data.gerente
-                    },
-                    cliente: {
-                        nombre: cliente.nombre,
-                        ciclo: cliente.ciclo,
-                        pago_semanal: cliente.pago_semanal,
-                        saldo_total: cliente.saldo_total,
-                        mora_total: cliente.mora_total,
-                        dias_mora: cliente.dias_mora,
-                        tipo_cartera: cliente.tipo_cartera,
-                        dia_pago: cliente.dia_pago
-                    }
+                    cliente
                 }
             } else {
                 return {
                     success: false,
-                    valido: false,
                     error: "Cliente no encontrado",
                     mensaje: "El número de crédito no existe o no está asignado a su cartera"
                 }
@@ -65,7 +50,6 @@ export const consultaClientes = {
                 if (error.response.status === API_CONFIG.HTTP_STATUS.NOT_FOUND) {
                     return {
                         success: false,
-                        valido: false,
                         error: "Cliente no encontrado",
                         mensaje: "El número de crédito no existe en el sistema"
                     }

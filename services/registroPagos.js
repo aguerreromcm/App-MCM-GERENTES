@@ -1,4 +1,5 @@
 import { apiClient, API_CONFIG } from "./api"
+import { dateShortBack, dateTimeBack } from "../utils/date"
 import storage from "../utils/storage"
 import * as FileSystem from "expo-file-system"
 
@@ -19,7 +20,17 @@ export const registroPagos = {
     async registrarPago(pagoData) {
         try {
             const token = await storage.getToken()
-            const fecha = pagoData.fechaCaptura.split("T")[0].split("/").reverse().join("-")
+            const fechaCapturaDate =
+                pagoData.fechaCaptura instanceof Date
+                    ? pagoData.fechaCaptura
+                    : new Date(pagoData.fechaCaptura)
+            const fechaApp = fechaCapturaDate
+            const diaSemana = fechaCapturaDate.getDay()
+
+            // Si es domingo, mover a viernes
+            if (diaSemana === 0) fechaCapturaDate.setDate(fechaCapturaDate.getDate() - 2)
+            // Si es sábado, mover a viernes
+            if (diaSemana === 6) fechaCapturaDate.setDate(fechaCapturaDate.getDate() - 1)
 
             let fotoBase64 = null
 
@@ -31,6 +42,10 @@ export const registroPagos = {
                 }
             }
 
+            const fpd = pagoData?.fechaDiaPago
+                ? pagoData.fechaDiaPago.split("/").reverse().join("-")
+                : ""
+
             const data = {
                 id_local: pagoData.id,
                 cdgns: pagoData.credito,
@@ -39,15 +54,12 @@ export const registroPagos = {
                 comentarios_ejecutivo: pagoData.comentarios || "",
                 tipomov: pagoData.tipoPago,
                 foto: fotoBase64,
-                fecha_valor: fecha,
+                fecha_valor: dateShortBack(fechaCapturaDate),
+                fecha_app: dateTimeBack(fechaApp, true),
+                fecha_dia_pago: fpd,
                 latitud: pagoData.latitud || null,
                 longitud: pagoData.longitud || null
             }
-
-            // console.log("Enviando pago al servidor:", {
-            //     ...data,
-            //     foto: fotoBase64 ? `[base64 image ${fotoBase64.length} chars]` : null
-            // })
 
             const response = await apiClient.post(API_CONFIG.ENDPOINTS.AGREGAR_PAGO_CLIENTE, data, {
                 headers: {
@@ -72,10 +84,10 @@ export const registroPagos = {
                 }
             }
         } catch (error) {
-            console.error("Error al registrar pago:", error)
+            console.error("Error al registrar pago:", error?.response?.data?.error)
             return {
                 success: false,
-                error: error.response?.data?.message || error.message || "Error de conexión",
+                error: error.response?.data?.error || error.message || "Error de conexión",
                 pagoId: pagoData.id
             }
         }

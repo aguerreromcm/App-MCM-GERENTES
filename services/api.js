@@ -26,21 +26,16 @@ export const API_CONFIG = {
         NOT_FOUND: 404,
         UNPROCESSABLE_ENTITY: 422,
         INTERNAL_SERVER_ERROR: 500
-    },
-
-    AXIOS_CONFIG: {
-        timeout: 10000, // 10 segundos
-        headers: {
-            Accept: "application/json",
-            "Content-Type": "application/json"
-        }
     }
 }
 
 // Crear instancia de axios con configuración base
 export const apiClient = axios.create({
     baseURL: API_CONFIG.BASE_URL,
-    ...API_CONFIG.AXIOS_CONFIG
+    timeout: 300000, // 5 minutos
+    headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json"
+    },
+    decompress: false
 })
-
-export default apiClient

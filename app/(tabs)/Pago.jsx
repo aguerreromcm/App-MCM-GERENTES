@@ -60,7 +60,7 @@ export default function Pago() {
                 try {
                     const resultado = await consultaClientes.consultarPorCredito(credito)
 
-                    if (resultado.success && resultado.valido) {
+                    if (resultado.success) {
                         setCreditoValido(true)
                         setInfoCredito(resultado.cliente)
 
@@ -97,6 +97,7 @@ export default function Pago() {
             } else if (credito.length > 0) {
                 setCreditoValido(null)
                 setInfoCredito(null)
+                limpiarFormulario(false)
             }
         }
 
@@ -145,9 +146,9 @@ export default function Pago() {
         ]).start()
     }
 
-    const limpiarFormulario = () => {
+    const limpiarFormulario = (credito = true) => {
         // Siempre limpiar todos los campos
-        setCredito("")
+        if (credito) setCredito("")
         setCiclo("")
         setMonto("")
         setTipoPago("")
@@ -295,7 +296,7 @@ export default function Pago() {
                         const usuarioId = usuario?.id_usuario || "UNKNOWN"
 
                         // Generar ID único para el pago
-                        const fechaCaptura = new Date().toISOString()
+                        const fechaCaptura = new Date()
                         const idPago = await generarIdPago(credito, fechaCaptura, usuarioId, monto)
 
                         // Preparar los datos del pago
@@ -312,6 +313,7 @@ export default function Pago() {
                             latitud: ubicacion.latitud,
                             longitud: ubicacion.longitud,
                             fechaCaptura: fechaCaptura,
+                            fechaDiaPago: infoCredito?.fecha_dia_pago || "",
                             usuarioId: usuarioId
                         }
 
