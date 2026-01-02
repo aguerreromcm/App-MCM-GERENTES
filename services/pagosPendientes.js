@@ -2,24 +2,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage"
 
 const PAGOS_PENDIENTES_KEY = "pagos_pendientes"
 
-// Estructura de un pago pendiente:
-// {
-//     id: string (ID único hasheado),
-//     credito: string,
-//     ciclo: string,
-//     monto: number,
-//     comentarios: string (opcional),
-//     tipoPago: string (código del tipo de pago),
-//     tipoEtiqueta: string (descripción del tipo para mostrar),
-//     fechaCaptura: string (ISO date),
-//     nombreCliente: string,
-//     estado: 'pendiente',
-//     fotoComprobante: string (opcional, URI de la imagen),
-//     latitud: number (opcional, coordenada de latitud),
-//     longitud: number (opcional, coordenada de longitud),
-//     usuarioId: string (opcional, ID del usuario que registra)
-// }
-
 export const pagosPendientes = {
     // Obtener todos los pagos pendientes
     async obtenerTodos() {
@@ -56,20 +38,9 @@ export const pagosPendientes = {
             }
 
             const nuevoPago = {
+                ...pagoData,
                 id: pagoData.id || `${Date.now()}_${pagoData.credito}`, // Usar ID hasheado o fallback
-                credito: pagoData.credito,
-                ciclo: pagoData.ciclo,
-                monto: parseFloat(pagoData.monto),
-                comentarios: pagoData.comentarios || "",
-                tipoPago: pagoData.tipoPago,
-                tipoEtiqueta: pagoData.tipoEtiqueta || "Desconocido",
-                fechaCaptura: pagoData.fechaCaptura || new Date().toISOString(),
-                nombreCliente: pagoData.nombreCliente || "",
-                estado: "pendiente",
-                fotoComprobante: pagoData.fotoComprobante || null,
-                latitud: pagoData.latitud || null,
-                longitud: pagoData.longitud || null,
-                usuarioId: pagoData.usuarioId || null
+                estado: "pendiente"
             }
 
             const pagosActualizados = [...pagosExistentes, nuevoPago]
