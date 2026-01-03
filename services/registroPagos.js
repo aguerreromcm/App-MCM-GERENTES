@@ -20,16 +20,16 @@ export const registroPagos = {
     async registrarPago(pagoData) {
         try {
             const token = await storage.getToken()
-            const fechaCapturaDate =
+            const fc =
                 pagoData.fechaCaptura instanceof Date
                     ? pagoData.fechaCaptura
                     : new Date(pagoData.fechaCaptura)
-            const fechaApp = fechaCapturaDate
+            const fechaCapturaDate = new Date(fc.getTime())
+            const fechaApp = new Date(fc.getTime())
             const diaSemana = fechaCapturaDate.getDay()
 
-            // Si es domingo, mover a viernes
+            // Si es sábado o domingo, mover a viernes
             if (diaSemana === 0) fechaCapturaDate.setDate(fechaCapturaDate.getDate() - 2)
-            // Si es sábado, mover a viernes
             if (diaSemana === 6) fechaCapturaDate.setDate(fechaCapturaDate.getDate() - 1)
 
             let fotoBase64 = null
