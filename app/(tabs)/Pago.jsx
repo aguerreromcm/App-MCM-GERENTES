@@ -282,7 +282,7 @@ export default function Pago() {
                     try {
                         // Mostrar modal de espera al inicio del proceso
                         showWait("Procesando Pago", "Registrando el pago, por favor espere...")
-
+                        // Prueba cambio repositorio
                         // Obtener ubicación antes de guardar el pago
                         const ubicacion = await obtenerUbicacion()
                         if (!ubicacion) {
