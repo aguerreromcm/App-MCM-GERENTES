@@ -51,6 +51,188 @@ export default function RutaEjecutivo() {
         router.back()
     }
 
+    const generarHTMLMapaOpenStreetMap = () => {
+        if (!rutaData || !rutaData.features) {
+            return `
+                <html>
+                    <body>
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif;">
+                            <p>No hay datos de ruta disponibles</p>
+                        </div>
+                    </body>
+                </html>
+            `
+        }
+
+        const puntos = rutaData.features.filter((feature) => feature.geometry.type === "Point")
+        const lineas = rutaData.features.filter((feature) => feature.geometry.type === "LineString")
+
+        if (puntos.length === 0) {
+            return `
+                <html>
+                    <body>
+                        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-family: Arial, sans-serif;">
+                            <p>No hay puntos de ruta disponibles</p>
+                        </div>
+                    </body>
+                </html>
+            `
+        }
+
+        const coordenadas = puntos.map((punto) => ({
+            lat: parseFloat(punto.geometry.coordinates[1]),
+            lng: parseFloat(punto.geometry.coordinates[0])
+        }))
+
+        const latitudes = coordenadas.map((coord) => coord.lat)
+        const longitudes = coordenadas.map((coord) => coord.lng)
+
+        const centroLat = latitudes.reduce((sum, lat) => sum + lat, 0) / latitudes.length
+        const centroLng = longitudes.reduce((sum, lng) => sum + lng, 0) / longitudes.length
+
+        // Generar marcadores para Leaflet
+        const marcadores = puntos
+            .map((punto) => {
+                const { coordinates } = punto.geometry
+                const { properties } = punto
+                return `
+                var circleMarker${properties.numero} = L.circleMarker([${parseFloat(
+                    coordinates[1]
+                )}, ${parseFloat(coordinates[0])}], {
+                    radius: 15,
+                    fillColor: "${properties.color || "#a93439"}",
+                    color: "#ffffff",
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 1
+                }).addTo(map);
+
+                // Crear el icono con número usando DivIcon
+                var numberIcon${properties.numero} = L.divIcon({
+                    html: '<div style="display: flex; align-items: center; justify-content: center; width: 30px; height: 30px;"><span style="color: white; font-weight: bold; font-size: 12px;">${properties.numero}</span></div>',
+                    className: 'number-marker',
+                    iconSize: [30, 30]
+                });
+
+                var numberMarker${properties.numero} = L.marker([${parseFloat(
+                    coordinates[1]
+                )}, ${parseFloat(coordinates[0])}], {
+                    icon: numberIcon${properties.numero}
+                }).addTo(map);
+
+                var popupContent${properties.numero} = \`
+                    <div style="font-family: Arial, sans-serif; min-width: 200px;">
+                        <h4 style="margin: 0 0 8px 0; color: #333;">${properties.nombre}</h4>
+                        <p style="margin: 4px 0;"><strong>Tipo:</strong> ${properties.tipo}</p>
+                        <p style="margin: 4px 0;"><strong>Monto:</strong> $${numeral(
+                            properties.monto
+                        ).format("0,0.00")}</p>
+                        <p style="margin: 4px 0;"><strong>Fecha:</strong> ${properties.fecha}</p>
+                        <p style="margin: 4px 0;"><strong>Registro:</strong> ${
+                            properties.fregistro
+                        }</p>
+                    </div>
+                \`;
+
+                circleMarker${properties.numero}.bindPopup(popupContent${properties.numero});
+                numberMarker${properties.numero}.bindPopup(popupContent${properties.numero});
+            `
+            })
+            .join("\n")
+
+        // Generar polylines para Leaflet
+        const polylines = lineas
+            .map((linea, index) => {
+                const coordinates = linea.geometry.coordinates
+                    .map((coord) => `[${parseFloat(coord[1])}, ${parseFloat(coord[0])}]`)
+                    .join(", ")
+
+                return `
+                var polyline${index} = L.polyline([${coordinates}], {
+                    color: '${linea.properties.color || "#0000FF"}',
+                    weight: 3,
+                    opacity: 1
+                }).addTo(map);
+            `
+            })
+            .join("\n")
+
+        // Calcular bounds
+        const boundsCoords = puntos
+            .map(
+                (punto) =>
+                    `[${parseFloat(punto.geometry.coordinates[1])}, ${parseFloat(
+                        punto.geometry.coordinates[0]
+                    )}]`
+            )
+            .join(", ")
+
+        return `
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Ruta de Cobranza</title>
+                <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+                    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+                    crossorigin=""/>
+                <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+                    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+                    crossorigin=""></script>
+                <style>
+                    body { 
+                        margin: 0; 
+                        padding: 0; 
+                    }
+                    #map { 
+                        height: 100vh; 
+                        width: 100%; 
+                    }
+                    .number-marker {
+                        background: transparent;
+                        border: none;
+                        pointer-events: none;
+                    }
+                    .leaflet-popup-content-wrapper {
+                        border-radius: 8px;
+                    }
+                    .leaflet-popup-content {
+                        margin: 12px;
+                    }
+                </style>
+            </head>
+            <body>
+                <div id="map"></div>
+                <script>
+                    // Inicializar el mapa
+                    var map = L.map('map').setView([${centroLat}, ${centroLng}], 13);
+
+                    // Agregar capa de OpenStreetMap
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                        maxZoom: 19
+                    }).addTo(map);
+
+                    ${marcadores}
+                    ${polylines}
+
+                    // Ajustar el mapa para mostrar todos los puntos
+                    var bounds = L.latLngBounds([${boundsCoords}]);
+                    map.fitBounds(bounds, { padding: [50, 50] });
+                    
+                    // Asegurar un zoom máximo
+                    setTimeout(function() {
+                        if (map.getZoom() > 18) {
+                            map.setZoom(18);
+                        }
+                    }, 100);
+                </script>
+            </body>
+            </html>
+        `
+    }
+
     const generarHTMLMapa = () => {
         if (!rutaData || !rutaData.features) {
             return `
@@ -111,8 +293,8 @@ export default function RutaEjecutivo() {
                 return `
                 var marker${properties.numero} = new google.maps.Marker({
                     position: { lat: ${parseFloat(coordinates[1])}, lng: ${parseFloat(
-                    coordinates[0]
-                )} },
+                        coordinates[0]
+                    )} },
                     map: map,
                     title: "${properties.nombre}",
                     label: {
@@ -365,7 +547,7 @@ export default function RutaEjecutivo() {
                             }}
                         >
                             <WebView
-                                source={{ html: generarHTMLMapa() }}
+                                source={{ html: generarHTMLMapaOpenStreetMap() }}
                                 style={{ flex: 1 }}
                                 javaScriptEnabled={true}
                                 domStorageEnabled={true}

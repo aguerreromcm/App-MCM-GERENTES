@@ -1,6 +1,5 @@
-import { Pressable, Text, Linking, Platform } from "react-native"
+import { Pressable, Linking, Platform } from "react-native"
 import { Feather } from "@expo/vector-icons"
-import { COLORS } from "../constants"
 import { useCustomAlert } from "../hooks/useCustomAlert"
 import CustomAlert from "./CustomAlert"
 
@@ -52,13 +51,11 @@ export default function ContactSupport() {
                 message
             )}`
 
-            // Intentar abrir WhatsApp nativo primero
             const canOpen = await Linking.canOpenURL(whatsappUrl)
 
             if (canOpen) {
                 await Linking.openURL(whatsappUrl)
             } else {
-                // Si no puede abrir la app, usar WhatsApp Web
                 await Linking.openURL(webWhatsappUrl)
             }
         } catch (error) {
@@ -71,7 +68,6 @@ export default function ContactSupport() {
 
     const makePhoneCall = async () => {
         try {
-            // Limpiar el número de teléfono (quitar espacios, guiones, etc.)
             const cleanPhoneNumber = phoneNumber.replace(/[^\d+]/g, "")
             const phoneUrl = `tel:${cleanPhoneNumber}`
             const canOpen = await Linking.canOpenURL(phoneUrl)
@@ -79,7 +75,6 @@ export default function ContactSupport() {
             if (canOpen) {
                 await Linking.openURL(phoneUrl)
             } else {
-                // Intentar con dialer en Android
                 if (Platform.OS === "android") {
                     const dialerUrl = `tel:${cleanPhoneNumber}`
                     try {
